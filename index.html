@@ -54,10 +54,10 @@ h1{font-family:var(--font-stencil);font-weight:400;font-size:30px;letter-spacing
 .seg label + input + label{border-left:2px solid var(--accent)}
 .seg input:checked + label{background:var(--accent);color:var(--card)}
 .seg input:focus-visible + label{outline:2px solid var(--duty);outline-offset:-2px}
-.pick input[type=date]{font-family:var(--font-mono);font-size:17px;padding:10px 12px;border:2px solid var(--line);border-radius:2px;background:var(--bg);color:var(--fg);width:100%;box-sizing:border-box}
-.pick input[type=date]{display:block;max-width:100%;min-width:0;-webkit-appearance:none;appearance:none;min-height:46px;text-align:left}
-.pick input[type=date]::-webkit-date-and-time-value{text-align:left}
-.pick input[type=date]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.datebox{border:2px solid var(--line);border-radius:2px;background:var(--bg);overflow:hidden;width:100%;box-sizing:border-box}
+.datebox:focus-within{border-color:var(--accent)}
+.pick input[type=date]{display:block;width:100%;max-width:100%;min-width:0;-webkit-min-logical-width:0;box-sizing:border-box;-webkit-appearance:none;appearance:none;border:0;border-radius:0;background:transparent;margin:0;padding:10px 12px;min-height:46px;font-family:var(--font-mono);font-size:17px;color:var(--fg);text-align:left;outline:none}
+.pick input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
 .info{font-size:14px;color:var(--muted)}
 .info b{color:var(--fg)}
 #out{display:flex;flex-direction:column;gap:14px}
@@ -84,6 +84,24 @@ html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
 body{margin:0;min-height:100vh}
 *,*::before,*::after{box-sizing:border-box}
 [hidden]{display:none!important}
+.bugbtn{align-self:center;font-family:var(--font-cond);font-weight:600;text-transform:uppercase;letter-spacing:.08em;font-size:14px;color:var(--muted);background:transparent;border:2px solid var(--line);border-radius:2px;padding:8px 16px;cursor:pointer}
+.bugbtn:focus-visible,.bug button:focus-visible,.bug textarea:focus-visible,.bug input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.bugwrap{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.bug{background:var(--card);border:2px solid var(--line);border-radius:2px;width:100%;max-width:520px;padding:16px;display:flex;flex-direction:column;gap:10px;max-height:100%;overflow:auto}
+.bug h2{margin:0;font-family:var(--font-stencil);font-weight:400;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
+.bug label{font-family:var(--font-cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:var(--muted)}
+.bug textarea,.bug input[type=text]{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:10px 12px;border:2px solid var(--line);border-radius:2px;background:var(--bg);color:var(--fg)}
+.bug textarea{min-height:120px;resize:vertical}
+.bug .ctx{font-size:12px;color:var(--muted);margin:0}
+.bug .row2{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.bug button{font-family:var(--font-cond);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:15px;padding:9px 18px;border-radius:2px;cursor:pointer;border:2px solid var(--accent)}
+.bug .send{background:var(--accent);color:var(--card)}
+.bug .cancel{background:transparent;color:var(--fg);border-color:var(--line)}
+.bug .send:disabled{opacity:.6;cursor:default}
+.bug .msg{font-size:14px;margin:0}
+.bug .msg.err{color:var(--duty)}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 </style>
 </head>
 <body>
@@ -145,12 +163,30 @@ body{margin:0;min-height:100vh}
         <input type="radio" name="n" id="n2" value="2"><label for="n2">2 služby</label>
       </div>
     </div>
-    <input type="date" id="d" aria-label="Datum 1. služby">
-    <input type="date" id="d2" aria-label="Datum 2. služby" hidden>
+    <div class="datebox"><input type="date" id="d" aria-label="Datum 1. služby"></div>
+    <div class="datebox" hidden><input type="date" id="d2" aria-label="Datum 2. služby"></div>
     <div class="info" id="info"></div>
   </div>
 
   <div id="out"></div>
+  <button type="button" class="bugbtn" id="bugOpen">Nahlásit chybu</button>
+</div>
+
+<div class="bugwrap" id="bugWrap" hidden>
+  <form class="bug" id="bugForm" novalidate>
+    <h2>Nahlásit chybu</h2>
+    <label for="bugText">Co nesedí?</label>
+    <textarea id="bugText" name="popis" required placeholder="Např. po páteční službě mi má vyjít volno už ve středu od 9:30…"></textarea>
+    <label for="bugName">Jméno (nepovinné)</label>
+    <input type="text" id="bugName" name="jmeno" autocomplete="name">
+    <div class="hp" aria-hidden="true"><input type="checkbox" name="botcheck" id="bugBot" tabindex="-1"></div>
+    <p class="ctx" id="bugCtx"></p>
+    <p class="msg" id="bugMsg" role="status"></p>
+    <div class="row2">
+      <button type="button" class="cancel" id="bugCancel">Zavřít</button>
+      <button type="submit" class="send" id="bugSend">Odeslat</button>
+    </div>
+  </form>
 </div>
 
 <script>
@@ -229,7 +265,7 @@ function weekHTML(title, mon, rows, wi, starts){
 function render(){
   const two = document.getElementById("n2").checked;
   const d2in = document.getElementById("d2");
-  d2in.hidden = !two;
+  d2in.parentElement.hidden = !two;
   const v1 = document.getElementById("d").value, v2 = d2in.value;
   const info = document.getElementById("info"), out = document.getElementById("out");
   out.innerHTML = "";
@@ -268,7 +304,58 @@ document.querySelectorAll('input[name="n"]').forEach(r => r.addEventListener("ch
   render();
 })();
 
-if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{})); }
+// Nahlášení chyby přes Web3Forms (adresa příjemce není v aplikaci vidět)
+(function(){
+  const KEY = "d370a49a-1f83-45d8-9757-8703774ce4c1";
+  const wrap = document.getElementById("bugWrap"), form = document.getElementById("bugForm");
+  const txt = document.getElementById("bugText"), nm = document.getElementById("bugName");
+  const msg = document.getElementById("bugMsg"), send = document.getElementById("bugSend");
+  const ctxEl = document.getElementById("bugCtx");
+  const context = () => {
+    const two = document.getElementById("n2").checked;
+    const d1 = document.getElementById("d").value, d2 = document.getElementById("d2").value;
+    return `Režim: ${two ? "2 služby" : "1 služba"} | Datum 1: ${d1 || "-"}${two ? " | Datum 2: " + (d2 || "-") : ""}`;
+  };
+  const close = () => { wrap.hidden = true; };
+  document.getElementById("bugOpen").addEventListener("click", () => {
+    msg.textContent = ""; msg.className = "msg"; send.disabled = false; send.textContent = "Odeslat";
+    ctxEl.textContent = "Přiloží se: " + context();
+    wrap.hidden = false; txt.focus();
+  });
+  document.getElementById("bugCancel").addEventListener("click", close);
+  wrap.addEventListener("click", e => { if (e.target === wrap) close(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !wrap.hidden) close(); });
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!txt.value.trim()) { msg.textContent = "Napiš prosím, co nesedí."; msg.className = "msg err"; txt.focus(); return; }
+    if (document.getElementById("bugBot").checked) return;
+    send.disabled = true; send.textContent = "Odesílám…"; msg.textContent = ""; msg.className = "msg";
+    try {
+      const r = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: {"Content-Type": "application/json", "Accept": "application/json"},
+        body: JSON.stringify({
+          access_key: KEY,
+          subject: "Službař – hlášení chyby",
+          from_name: "Službař",
+          jmeno: nm.value.trim() || "neuvedeno",
+          popis: txt.value.trim(),
+          kontext: context(),
+          zarizeni: navigator.userAgent,
+          cas: new Date().toLocaleString("cs-CZ")
+        })
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || data.success === false) throw new Error(data.message || "chyba");
+      msg.textContent = "Odesláno, díky!"; send.textContent = "Odesláno";
+      txt.value = ""; setTimeout(close, 1500);
+    } catch (err) {
+      msg.textContent = "Odeslání se nepovedlo. Zkontroluj připojení k internetu a zkus to znovu.";
+      msg.className = "msg err"; send.disabled = false; send.textContent = "Odeslat";
+    }
+  });
+})();
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{})); }
 </script>
 </body>
 </html>
