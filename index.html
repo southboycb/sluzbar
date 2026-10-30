@@ -317,9 +317,23 @@ document.querySelectorAll('input[name="n"]').forEach(r => r.addEventListener("ch
     return `Režim: ${two ? "2 služby" : "1 služba"} | Datum 1: ${d1 || "-"}${two ? " | Datum 2: " + (d2 || "-") : ""}`;
   };
   const close = () => { wrap.hidden = true; };
+  // Omezení: 2 minuty mezi hlášeními, max. 5 hlášení za den z jednoho telefonu
+  const PAUSE = 120000, PER_DAY = 5, LS = "sluzbar_bug_log";
+  let openedAt = 0;
+  const log = () => { try { return JSON.parse(localStorage.getItem(LS) || "[]").filter(t => Date.now() - t < 86400000); } catch(e) { return []; } };
+  const save = l => { try { localStorage.setItem(LS, JSON.stringify(l)); } catch(e) {} };
+  const blocked = () => {
+    const l = log();
+    if (l.length >= PER_DAY) return "Dnes už jsi poslal 5 hlášení. Další můžeš poslat zítra.";
+    const wait = l.length ? Math.ceil((PAUSE - (Date.now() - Math.max(...l))) / 1000) : 0;
+    if (wait > 0) return `Další hlášení můžeš poslat za ${wait > 60 ? Math.ceil(wait/60) + " min" : wait + " s"}.`;
+    return "";
+  };
   document.getElementById("bugOpen").addEventListener("click", () => {
     msg.textContent = ""; msg.className = "msg"; send.disabled = false; send.textContent = "Odeslat";
     ctxEl.textContent = "Přiloží se: " + context();
+    openedAt = Date.now();
+    const b = blocked(); if (b) { msg.textContent = b; msg.className = "msg err"; send.disabled = true; }
     wrap.hidden = false; txt.focus();
   });
   document.getElementById("bugCancel").addEventListener("click", close);
@@ -327,8 +341,9 @@ document.querySelectorAll('input[name="n"]').forEach(r => r.addEventListener("ch
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !wrap.hidden) close(); });
   form.addEventListener("submit", async e => {
     e.preventDefault();
-    if (!txt.value.trim()) { msg.textContent = "Napiš prosím, co nesedí."; msg.className = "msg err"; txt.focus(); return; }
-    if (document.getElementById("bugBot").checked) return;
+    if (txt.value.trim().length < 5) { msg.textContent = "Napiš prosím, co nesedí."; msg.className = "msg err"; txt.focus(); return; }
+    if (document.getElementById("bugBot").checked || Date.now() - openedAt < 3000) return;
+    const b = blocked(); if (b) { msg.textContent = b; msg.className = "msg err"; return; }
     send.disabled = true; send.textContent = "Odesílám…"; msg.textContent = ""; msg.className = "msg";
     try {
       const r = await fetch("https://api.web3forms.com/submit", {
@@ -347,6 +362,7 @@ document.querySelectorAll('input[name="n"]').forEach(r => r.addEventListener("ch
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok || data.success === false) throw new Error(data.message || "chyba");
+      save(log().concat(Date.now()));
       msg.textContent = "Odesláno, díky!"; send.textContent = "Odesláno";
       txt.value = ""; setTimeout(close, 1500);
     } catch (err) {
